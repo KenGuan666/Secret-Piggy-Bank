@@ -15,7 +15,7 @@ class PiggyBankManager:
         self.existing_names = set([file_name[:-4] for file_name in os.listdir('data') if re.match('.*\.txt', file_name)])
 
     def run(self):
-        self.interface.display('Welcome to Secret Piggy Bank system. Please choose one of the following operations')
+        self.interface.display('Welcome to Secret Piggy Bank system. Please choose one of the following operations.')
         self.interface.display('Create, Insert, Break, Exit, Help')
 
         response_mapping = {
@@ -33,17 +33,14 @@ class PiggyBankManager:
             func() if func else self.interface.display('Please select a valid operation. Type \"Help\" for help')
             self.interface.display('\nCreate, Insert, Break, Exit, Help')
 
+    def create_name_check(self, text):
+        if not text or text in illegal_piggy_bank_names:
+            return 'Please use another name.'
+        if text in self.existing_names:
+            return 'Piggy bank with name \"{}\" already exists.'.format(text)
 
     def create(self):
-        name = ''
-        while not name:
-            typed_name = self.interface.display_and_await_input('Name your Piggy Bank:')
-            if not typed_name or typed_name in illegal_piggy_bank_names:
-                self.interface.display('Please use another name.')
-            elif typed_name in self.existing_names:
-                self.interface.display('Piggy bank with name \"{}\" already exists.'.format(typed_name))
-            else:
-                name = typed_name
+        name = self.interface.display_and_await_input_with_check('Name your Piggy Bank.', self.create_name_check)
 
         data_file = open('data/{}'.format(name + '.txt'), 'w')
         key = RSA.generate(1024)
@@ -54,20 +51,17 @@ class PiggyBankManager:
 
         self.existing_names.add(name)
 
+    def type_name_check(self, text):
+        if not text == quit_command and text not in self.existing_names:
+            return 'No Piggy Bank named {}.'.format(text)
 
     def insert(self):
         self.interface.display('Which of the following Piggy Bank would you like to insert to? Type \'Quit\' to quit.')
         self.interface.display(', '.join(self.existing_names))
 
-        name = ''
-        while not name:
-            typed_name = self.interface.await_input()
-            if typed_name == 'quit':
-                return
-            if typed_name in self.existing_names:
-                name = typed_name
-            else:
-                self.interface.display('No Piggy Bank named {}.'.format(typed_name))
+        name = self.interface.await_input_with_check(self.type_name_check)
+        if name == quit_command:
+            return
 
         message = self.interface.display_and_await_input('Please type your message:')
         hex_encoded_message = int(message.encode('utf-8').hex(), 16)
@@ -91,18 +85,12 @@ class PiggyBankManager:
         self.interface.display('Which of the following Piggy Bank would you like to break? Type \'Quit\' to quit.')
         self.interface.display(', '.join(self.existing_names))
 
-        name, password = '', ''
-        while not name:
-            typed_name = self.interface.await_input()
-            if typed_name == 'quit':
-                return
-            if typed_name in self.existing_names:
-                typed_password = self.interface.display_and_await_input('Please enter your password. The Piggy Bank will be deleted after this operation! Type \'Quit\' to quit.')
-                if typed_password == 'quit':
-                    return
-                name, password = typed_name, typed_password
-            else:
-                self.interface.display('No Piggy Bank named {}.'.format(typed_name))
+        name = self.interface.await_input_with_check(self.type_name_check)
+        if name == 'quit':
+            return
+        password = self.interface.display_and_await_input('Please enter your password. The Piggy Bank will be deleted after this operation! Type \'Quit\' to quit.')
+        if password == 'quit':
+            return
         
         self.decrypt_piggy_bank(name, password)
         os.remove('data/{}.txt'.format(name))
@@ -116,25 +104,26 @@ class PiggyBankManager:
         try:
             key = RSA.construct((N, e, int(password)))
         except ValueError:
-            self.interface.display('Incorrect password. Piggy Bank Destructed.')
+            self.interface.display('Incorrect password. Piggy Bank destructed.')
             return
-            
+        
         for i in range(2, len(data_content)):
             encrypted_int = int(data_content[i].strip())
             decrypted_int = key.decrypt(encrypted_int)
             decrypted_message = bytearray.fromhex(hex(decrypted_int)[2:]).decode()
             self.interface.display(decrypted_message)
 
+        self.interface.display('Entries retrieved. Piggy Bank destructed.')
         data_file.close()
 
     def help(self):
         self.interface.display('Create: Make a new Piggy Bank and generate a password.')
         self.interface.display('Insert: Add an entry to a Piggy Bank.')
         self.interface.display('Break: Delete a Piggy Bank and access all its entries. Breaking with an incorrect password will delete the Piggy Bank without gaining access to any entries.')
-        self.interface.display('Exit: Exit the program')
+        self.interface.display('Exit: Exit the program.')
         
-
-illegal_piggy_bank_names = ['quit']
+quit_command = 'quit'
+illegal_piggy_bank_names = [quit_command]
 
 def main():
     manager = PiggyBankManager()
