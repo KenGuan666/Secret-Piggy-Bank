@@ -8,8 +8,11 @@ class TerminalInterface(Interface):
         print(text)
     
     def display_and_await_input(self, text):
-        print(text)
-        return input()
+        self.display(text)
+        return self.await_input()
+
+    def await_input(self):
+        return str.lower(input()).strip()
 
 def createNewInterface():
     return TerminalInterface()
