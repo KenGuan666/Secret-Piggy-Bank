@@ -1,4 +1,3 @@
-
 class Interface:
     pass
 
@@ -26,7 +25,6 @@ class TerminalInterface(Interface):
                 self.display(check)
             else:
                 return response
-
 
 def createNewInterface():
     return TerminalInterface()
